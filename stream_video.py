@@ -4,6 +4,9 @@ The overlap/blending schedule follows DiffSynth-Studio's pinned H3 VAE
 decoder (Apache-2.0; see licenses/diffsynth-APACHE-2.0.txt).
 """
 import subprocess
+import tempfile
+from pathlib import Path
+from contextlib import suppress
 
 
 def decoded_chunks(vae, latents):
@@ -35,38 +38,38 @@ def export_stream(pipe, latents, source, output, frames):
     """Keep only one decoded chunk in memory and retain the source audio track."""
     import torch
     height, width = (dimension * 16 for dimension in latents.shape[-2:])
-    silent = output.with_name(output.stem + ".silent.mp4")
-    partial = output.with_name(output.stem + ".partial.mp4")
-    command = ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
-               "-s", f"{width}x{height}", "-framerate", "24", "-i", "pipe:0",
-               "-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p",
-               "-an", str(silent)]
-    written = 0
-    encoder = subprocess.Popen(command, stdin=subprocess.PIPE)
-    try:
-        for chunk in decoded_chunks(pipe.video_vae, latents):
-            if not torch.isfinite(chunk).all():
-                raise ValueError("Decoded video contains non-finite pixels")
-            images = pipe.vae_output_to_video(chunk, min_value=0, max_value=1)
-            for image in images:
-                encoder.stdin.write(image.tobytes())
-            written += len(images)
-            print(f"DECODE {written}/{frames} frames", flush=True)
-            del chunk, images
-        encoder.stdin.close()
-        if encoder.wait() != 0:
-            raise RuntimeError("FFmpeg video encoding failed")
-        if written != frames:
-            raise ValueError(f"Expected {frames} frames, decoded {written}")
-        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(silent), "-i", str(source),
-                        "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-t", str(frames / 24),
-                        "-movflags", "+faststart", str(partial)], check=True)
-        partial.replace(output)
-    finally:
-        if encoder.stdin and not encoder.stdin.closed:
+    with tempfile.TemporaryDirectory(dir=output.parent, prefix=output.stem + ".") as folder:
+        silent = Path(folder) / "silent.mp4"
+        partial = Path(folder) / "final.mp4"
+        command = ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
+                   "-s", f"{width}x{height}", "-framerate", "24", "-i", "pipe:0",
+                   "-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p",
+                   "-an", str(silent)]
+        written = 0
+        encoder = subprocess.Popen(command, stdin=subprocess.PIPE)
+        try:
+            for chunk in decoded_chunks(pipe.video_vae, latents):
+                if not torch.isfinite(chunk).all():
+                    raise ValueError("Decoded video contains non-finite pixels")
+                images = pipe.vae_output_to_video(chunk, min_value=0, max_value=1)
+                for image in images:
+                    encoder.stdin.write(image.tobytes())
+                written += len(images)
+                print(f"DECODE {written}/{frames} frames", flush=True)
+                del chunk, images
             encoder.stdin.close()
-        if encoder.poll() is None:
-            encoder.terminate()
-            encoder.wait()
-        silent.unlink(missing_ok=True)
-        partial.unlink(missing_ok=True)
+            if encoder.wait() != 0:
+                raise RuntimeError("FFmpeg video encoding failed")
+            if written != frames:
+                raise ValueError(f"Expected {frames} frames, decoded {written}")
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(silent), "-i", str(source),
+                            "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-t", str(frames / 24),
+                            "-movflags", "+faststart", str(partial)], check=True)
+            partial.replace(output)
+        finally:
+            if encoder.stdin and not encoder.stdin.closed:
+                with suppress(BrokenPipeError):
+                    encoder.stdin.close()
+            if encoder.poll() is None:
+                encoder.terminate()
+                encoder.wait()
