@@ -1,0 +1,17 @@
+[
+  {
+    "scene": 1,
+    "prompt_file": "storm-guardian-scene-1.txt",
+    "seed": 9175
+  },
+  {
+    "scene": 2,
+    "prompt_file": "storm-guardian-scene-2.txt",
+    "seed": 9176
+  },
+  {
+    "scene": 3,
+    "prompt_file": "storm-guardian-scene-3.txt",
+    "seed": 9177
+  }
+]
