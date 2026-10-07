@@ -3,14 +3,15 @@ import argparse
 import json
 import subprocess
 import sys
+from pathlib import Path
 from settings import ROOT
 
 
-def render_story(steps=4):
+def render_story(steps=4, scenes_file=ROOT / "prompts/dog-walking-scenes.json", output_dir=ROOT / "output/dog-walking"):
     from imageio_ffmpeg import get_ffmpeg_exe
-    output = ROOT / "output"
-    output.mkdir(exist_ok=True)
-    scenes = json.loads((ROOT / "prompts/scenes.json").read_text())
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    scenes = json.loads(Path(scenes_file).read_text())
     clips = []
     for scene in scenes:
         clip = output / f"scene-{scene['scene']}.mp4"
@@ -32,4 +33,7 @@ def render_story(steps=4):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--steps", type=int, choices=[4, 8], default=4)
-    print(render_story(parser.parse_args().steps))
+    parser.add_argument("--scenes", type=Path, default=ROOT / "prompts/dog-walking-scenes.json")
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "output/dog-walking")
+    args = parser.parse_args()
+    print(render_story(args.steps, args.scenes, args.output_dir))
