@@ -72,9 +72,19 @@ def enable_bounded_rows():
         v = qkv[:, 2].contiguous()
         del qkv
         if rope_freqs is not None:
-            q, k = dit._apply_rope(q, rope_freqs), dit._apply_rope(k, rope_freqs)
-        output = dit._sdpa_varlen_attention(q, k, v, cu_seqlens=cu_seqlens,
-                                          softmax_scale=self.softmax_scale)
+            for start in range(0, len(x), CHUNK_ROWS):
+                section = slice(start, start + CHUNK_ROWS)
+                q[section].copy_(dit._apply_rope(q[section], rope_freqs[section]))
+                k[section].copy_(dit._apply_rope(k[section], rope_freqs[section]))
+        output = torch.empty_like(q)
+        bounds = cu_seqlens.tolist()
+        for start, stop in zip(bounds[:-1], bounds[1:]):
+            if start == stop:
+                continue
+            packed = [item[start:stop].transpose(0, 1).unsqueeze(0) for item in (q, k, v)]
+            target = output[start:stop].transpose(0, 1).unsqueeze(0)
+            dit.attention_forward(*packed, scale=self.softmax_scale, out=target)
+        del q, k, v, packed
         return self.out_proj(output.reshape(len(x), -1))
 
     AutoWrappedLinear.forward = linear
