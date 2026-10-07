@@ -1,4 +1,9 @@
-"""Bound H3 inference temporaries without splitting the attention sequence."""
+"""Bound H3 inference temporaries without splitting the attention sequence.
+
+Adapted from DiffSynth-Studio's streamed layers and H3 MLP/attention.
+Changes batch pointwise work and release fused QKV storage before attention.
+Apache-2.0 terms: licenses/diffsynth-APACHE-2.0.txt.
+"""
 import torch
 import torch.nn.functional as F
 
