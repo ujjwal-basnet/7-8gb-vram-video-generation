@@ -21,7 +21,13 @@ uv run python monitor_run.py --steps 8 --frames 39 --output output/scene-8step.m
 
 Four-step is the measured default. Eight-step switches to high resolution after six steps. Both start at 512×320 and finish at 640×384, 24 fps with audio. SelfLift refines at the higher resolution during denoising; it does not guarantee identity, anatomy or motion accuracy. Try 39 frames first; 124 frames gives about five seconds. Edit the prompt or pass `--prompt-file path.txt`.
 
-For a 15-second dog-walking film, run `uv run python render_story.py --steps 4` (or `--steps 8` after downloading that adapter). This uses the three prompts in `prompts/dog-walking-scenes.json`, with one dog walking in each shot. Scenes run one at a time and are joined and trimmed to 15 seconds in `output/dog-walking/film-15s.mp4`. To render the earlier fantasy story, pass `--scenes prompts/scenes.json --output-dir output/storm-guardian`. The reference four-step film took about 54 minutes on T4, excluding setup/downloads. Eight-step time and memory are not measured yet.
+## Notebook
+
+[View the input/output notebook](notebooks/video_generation.ipynb) · [Open in Google Colab](https://colab.research.google.com/github/ujjwal-basnet/7-8gb-vram-video-generation/blob/main/notebooks/video_generation.ipynb)
+
+The notebook shows an editable dog-walking prompt, four/eight-step settings, model download, generation and a video player. It also displays the preserved reference GIFs. Select a GPU runtime on Colab; for local Jupyter, set `PROJECT` to your cloned repository directory.
+
+Each run generates one clip. A continuous 15-second dog video under 8 GB has not been verified. The existing 15-second GIF is a historical reference sample, not a new dog result.
 
 ## Generated GIF previews
 
