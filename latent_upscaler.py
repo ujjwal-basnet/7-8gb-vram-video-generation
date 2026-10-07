@@ -1,4 +1,4 @@
-"""Optional learned H3 lift; inputs/outputs use DiffSynth's normalized latents."""
+"""Learned H3 lift with the released Conv v1 node's latent scaling contract."""
 import hashlib
 from pathlib import Path
 from settings import ROOT
@@ -28,13 +28,15 @@ def download():
 def learned_lift(clean, height, width):
     """Run the published Conv v1 network once, then release its GPU weights.
 
-    DiffSynth already applies the released per-channel normalization. Do not
-    repeat the raw ComfyUI latent normalization here. Audio is never passed in.
+    Inputs/outputs are codec-normalized H3 latents. Conv v1 still requires
+    the released node's additional per-channel affine transform around the
+    network. Omitting it produces striped, invalid latents. Audio never enters.
     The caller must unload H3 before this function and restage it afterward.
     """
     import torch
     from safetensors.torch import load_file
     from latent_upscaler_network import LatentResizer3D
+    from diffsynth.models.minimax_h3_video_vae import _VIDEO_LATENTS_MEAN, _VIDEO_LATENTS_STD
     if clean.ndim != 5 or clean.shape[1] != 24:
         raise ValueError("Expected normalized H3 video latents [B,24,T,H,W]")
     if height % 32 or width % 32:
@@ -49,11 +51,14 @@ def learned_lift(clean, height, width):
         model = LatentResizer3D(attn=False)
     model.load_state_dict(load_file(str(PATH), device="cpu"), strict=True, assign=True)
     model = model.to(device=clean.device, dtype=torch.float32).eval().requires_grad_(False)
+    mean = torch.tensor(_VIDEO_LATENTS_MEAN, device=clean.device).view(1, -1, 1, 1, 1)
+    std = torch.tensor(_VIDEO_LATENTS_STD, device=clean.device).view(1, -1, 1, 1, 1)
     try:
         with torch.inference_mode():
-            output = model(clean.float(), scale=sum(ratios) / 2,
+            output = model((clean.float() - mean) / std, scale=sum(ratios) / 2,
                            target_size=(clean.shape[2], height // 16, width // 16),
                            enable_chunking=True)
+            output = output * std + mean
         if not torch.isfinite(output).all():
             raise ValueError("Learned H3 lift produced non-finite video latents")
         return output.to(dtype=clean.dtype)

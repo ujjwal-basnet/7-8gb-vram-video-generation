@@ -4,11 +4,15 @@ import sys
 import json
 from pathlib import Path
 import time
+import argparse
 
 root=Path(__file__).resolve().parent
+parser=argparse.ArgumentParser(add_help=False)
+parser.add_argument("--script",choices=["main.py","upscale_video.py"],default="main.py")
+options,worker_args=parser.parse_known_args()
 log=root/"render.log"
 with log.open("w") as stream:
-    worker=subprocess.Popen([sys.executable,str(root/"main.py"),*sys.argv[1:]],stdout=stream,stderr=subprocess.STDOUT)
+    worker=subprocess.Popen([sys.executable,str(root/options.script),*worker_args],stdout=stream,stderr=subprocess.STDOUT)
     measurements=dict(worker_pid=worker.pid,peak_worker_ram_gib=0,peak_device_used_gib=0,
                       minimum_available_ram_gib=None,memory_guard_stopped=False)
     while worker.poll() is None:

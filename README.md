@@ -1,6 +1,6 @@
 # 7–8 GB VRAM Video Generation
 
-Python/PyTorch video generation with H3 hybrid INT8, Turbo and optional experimental SelfLift-zero. No ComfyUI runtime. The default prompt is one dog walking with a steady camera and simple background. `prompts/lantern.txt` is another simple prompt.
+Python/PyTorch video generation with H3 hybrid INT8, Turbo, optional experimental SelfLift-zero and learned 2× enhancement of finished clips. No ComfyUI runtime. The default prompt is one dog walking with a steady camera and simple background. `prompts/lantern.txt` is another simple prompt.
 
 Requires Linux, Python 3.12, a CUDA GPU, `ffmpeg`, [uv](https://docs.astral.sh/uv/getting-started/installation/), around 60 GB disk and preferably 16 GB system RAM. The continuous 15-second dog sample on a Colab T4 peaked at 6.18 GiB sampled GPU memory and 8.72 GiB process RAM. The T4 has 16 GB VRAM; the allocator cap is 6.5 GiB for short clips and 7.0 GiB for long clips. A physical 8 GB GPU remains untested.
 
@@ -35,20 +35,32 @@ uv run python monitor_run.py --mode native --resolution 512x320 --steps 8 --fram
 
 Four-step SelfLift is the default. Native mode runs every step at the selected output resolution: 640×384 or 512×320. SelfLift starts at 512×320 and switches to 640×384 after three of four steps or six of eight steps. Both modes export 24-fps video with audio. SelfLift does not guarantee identity, anatomy or motion accuracy. Try 39 frames first; 124 frames gives about five seconds. For more than 124 frames, choose native mode and 512×320. The verified long sample uses 362 frames (15.083 seconds) and eight steps. Edit the prompt or pass `--prompt-file path.txt`.
 
-## Optional learned H3 upscaler
+## Enhance a finished video
+
+```bash
+uv run python download_models.py --steps 8
+uv run python latent_upscaler.py
+uv run python monitor_run.py --script upscale_video.py --input samples/dog-walking-15s.mp4 --output output/dog-hd.mp4
+```
+
+This reuses the saved video. The released H3 3D Conv upscaler doubles both dimensions, then H3 performs one low-noise Euler refinement evaluation per overlapping temporal window. The source's eight-step generation is separate. A 512×320 clip becomes 1024×640 at the original 24 fps. Audio is copied from the input, and previously refined overlap is held fixed. The decoder writes chunks directly to FFmpeg to keep memory bounded.
+
+Use your own generated clip with `--input output/dog-15s.mp4 --prompt-file path.txt`. Add `--frames 39` for a short pilot. The command supports H3 inputs with audio, dimensions up to 640×384, and 22–362 frames satisfying `17*n+5`; it retains the original file. The 1024×640 short pilot passed visual and decode checks. This enhancement is an additional quality pass after generation, distinct from the experimental SelfLift transition.
+
+## Optional learned SelfLift transition
 
 ```bash
 uv run python latent_upscaler.py
 uv run python monitor_run.py --steps 8 --frames 39 --upscaler learned3d --output output/learned-8step.mp4
 ```
 
-This adds the released 3D Conv v1 model (~659 MiB download) to the SelfLift transition, replacing the direct interpolated lift. H3 is unloaded while the upscaler runs; the paired VAE anchor and remaining diffusion steps are retained. The output stays 640×384. The completed eight-step learned-lift test produced visible stripe artifacts, so use `--upscaler interpolate` for SelfLift. The learned option remains experimental and is not the tutorial's Ultimate Upscale face-fix pipeline.
+This adds the same 3D Conv v1 model (~659 MiB download) inside the SelfLift transition. H3 is unloaded while the upscaler runs; the paired VAE anchor and remaining diffusion steps are retained. Output stays 640×384. Use `--upscaler interpolate` for SelfLift: the learned transition has not been rebenchmarked after correcting its latent scaling. The separately validated enhancement command above applies learned upscaling to a finished clip.
 
 ## Notebook
 
 [View the input/output notebook](notebooks/video_generation.ipynb) · [Open in Google Colab](https://colab.research.google.com/github/ujjwal-basnet/7-8gb-vram-video-generation/blob/main/notebooks/video_generation.ipynb)
 
-The notebook shows an editable dog-walking prompt, four/eight-step settings, native/SelfLift modes, resolution, model download, generation and a video player. Its default input matches the completed 15-second dog sample. It also displays the short dog samples and the preserved reference GIFs. Select a GPU runtime on Colab; for local Jupyter, set `PROJECT` to your cloned repository directory. Start with `FRAMES=39` for a quicker check.
+The notebook shows an editable dog-walking prompt, four/eight-step settings, native/SelfLift modes, resolution, model download, generation, optional enhancement and a video player. Its default input generates a 15-second dog clip and enhances it. Set `ENHANCE=False` for only the base output, or start with `FRAMES=39` for a quicker check. It also displays the preserved samples. Select a GPU runtime on Colab; for local Jupyter, set `PROJECT` to your cloned repository directory.
 
 Each run generates one clip. The 15-second dog was generated in one continuous pass at 512×320 on the capped T4. The existing storm-guardian GIF is a preserved reference from the earlier workflow.
 
