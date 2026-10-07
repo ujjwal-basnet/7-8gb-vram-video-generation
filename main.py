@@ -12,12 +12,13 @@ def main():
     parser.add_argument("--seed", type=int, default=9175)
     parser.add_argument("--steps", type=int, choices=[4, 8], default=4)
     parser.add_argument("--mode", choices=["selflift", "native"], default="selflift")
+    parser.add_argument("--resolution", choices=["640x384", "512x320"], default="640x384")
     parser.add_argument("--upscaler", choices=["interpolate", "learned3d"], default="interpolate")
     args = parser.parse_args()
     from pipeline import render
     print(render(args.prompt_file.read_text().strip(), args.output,
                  RenderSettings(frames=args.frames, seed=args.seed, steps=args.steps, mode=args.mode,
-                                upscaler=args.upscaler)), flush=True)
+                                resolution=args.resolution, upscaler=args.upscaler)), flush=True)
 
 
 if __name__ == "__main__":
