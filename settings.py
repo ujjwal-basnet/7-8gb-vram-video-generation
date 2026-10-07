@@ -1,4 +1,4 @@
-"""One fixed H3 + Turbo + SelfLift recipe for a small GPU memory footprint."""
+"""H3 + Turbo with optional SelfLift and a fixed GPU memory cap."""
 from pathlib import Path
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator

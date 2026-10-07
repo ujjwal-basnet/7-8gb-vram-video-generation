@@ -53,6 +53,10 @@ Dog walking: eight Turbo steps, native mode, 39 frames (1.625 seconds), seed 917
 
 ![Eight-step dog walking](samples/dog-walking-8step.gif)
 
+Same dog prompt with eight-step Turbo and interpolation SelfLift: 39 frames, seed 9175, 16m25s generation on the T4. Sampled GPU peak was 4.48 GiB; process RAM peaked at 8.56 GiB. Native was faster for this tested size and memory profile.
+
+![Eight-step SelfLift dog walking](samples/dog-walking-selflift-8step.gif)
+
 The following reference samples used four-step SelfLift:
 
 Short scene:
