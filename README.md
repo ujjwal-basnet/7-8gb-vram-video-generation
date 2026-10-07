@@ -2,7 +2,7 @@
 
 Python/PyTorch video generation with H3 hybrid INT8, Turbo, optional experimental SelfLift-zero and learned 2× enhancement of finished clips. No ComfyUI runtime. The default prompt is one dog walking with a steady camera and simple background. `prompts/lantern.txt` is another simple prompt.
 
-Requires Linux, Python 3.12, a CUDA GPU, `ffmpeg`, [uv](https://docs.astral.sh/uv/getting-started/installation/), around 60 GB disk and preferably 16 GB system RAM. The continuous 15-second dog sample on a Colab T4 peaked at 6.18 GiB sampled GPU memory and 8.72 GiB process RAM. The T4 has 16 GB VRAM; the allocator cap is 6.5 GiB for short clips and 7.0 GiB for long clips. A physical 8 GB GPU remains untested.
+Requires Linux, Python 3.12, a CUDA GPU, `ffmpeg`, [uv](https://docs.astral.sh/uv/getting-started/installation/), around 60 GB disk and preferably 16 GB system RAM. The continuous 15-second dog generation on a Colab T4 peaked at 6.18 GiB sampled GPU memory and 8.72 GiB process RAM. Its 1024×640 enhancement peaked at 5.78 GiB GPU memory and 9.07 GiB process RAM. The T4 has 16 GB VRAM; the allocator cap is 6.5 GiB for short clips and 7.0 GiB for long clips. A physical 8 GB GPU remains untested.
 
 ```bash
 git clone https://github.com/ujjwal-basnet/7-8gb-vram-video-generation.git
@@ -45,7 +45,7 @@ uv run python monitor_run.py --script upscale_video.py --input samples/dog-walki
 
 This reuses the saved video. The released H3 3D Conv upscaler doubles both dimensions, then H3 performs one low-noise Euler refinement evaluation per overlapping temporal window. The source's eight-step generation is separate. A 512×320 clip becomes 1024×640 at the original 24 fps. Audio is copied from the input, and previously refined overlap is held fixed. The decoder writes chunks directly to FFmpeg to keep memory bounded.
 
-Use your own generated clip with `--input output/dog-15s.mp4 --prompt-file path.txt`. Add `--frames 39` for a short pilot. The command supports H3 inputs with audio, dimensions up to 640×384, and 22–362 frames satisfying `17*n+5`; it retains the original file. The 1024×640 short pilot passed visual and decode checks. This enhancement is an additional quality pass after generation, distinct from the experimental SelfLift transition.
+Use your own generated clip with `--input output/dog-15s.mp4 --prompt-file path.txt`. Add `--frames 39` for a short pilot. The command supports H3 inputs with audio, dimensions up to 640×384, and 22–362 frames satisfying `17*n+5`; it retains the original file. The completed 1024×640, 362-frame enhancement took 55m23s on the T4, using 11 refinement evaluations. Generating its eight-step source and enhancing it took about 1h39m in total, excluding downloads. This is an additional quality pass after generation, distinct from the experimental SelfLift transition.
 
 ## Optional learned SelfLift transition
 
@@ -67,6 +67,12 @@ Each run generates one clip. The 15-second dog was generated in one continuous p
 ## Generated GIF previews
 
 These loop directly on GitHub. GIF resolution/frame rate is reduced from the original 24-fps videos. GIFs have no audio.
+
+Enhanced continuous dog walking: **1024×640, 24 fps, 362 frames (15.083 seconds)**. Eight-step H3 source → learned 2× upscale → low-noise H3 refinement. Enhancement took 55m23s on the T4, with 5.78 GiB sampled GPU peak and 9.07 GiB process RAM. The original AAC track is byte-identical. Facial detail and fur edges are clearer in the inspected frames; the tail still approaches the frame edge. The GIF is reduced to 640×400 at 8 fps.
+
+![Enhanced continuous 15-second dog walking](samples/dog-walking-15s-hd.gif)
+
+[Download the enhanced MP4 with audio](samples/dog-walking-15s-hd.mp4)
 
 Continuous dog walking: eight Turbo steps, native mode, 512×320, 362 frames (15.083 seconds), seed 9175. Generation took 42m48s on the T4; loading and export bring the render to 43m14s. Sampled total GPU memory peaked at 6.18 GiB; process RAM peaked at 8.72 GiB. The tail occasionally reaches the frame edge. SelfLift was disabled for this long sample.
 
@@ -94,4 +100,4 @@ Short scene:
 
 Upstream models and code: [MiniMax H3](https://huggingface.co/MiniMaxAI/MiniMax-H3), [hybrid checkpoint](https://huggingface.co/smhfacct/Minimax-H3-fl2va-ref2va-hybrid-models), [DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio), [NF4 components](https://huggingface.co/DiffSynth-Studio/MiniMax-H3-NF4), [LightX2V Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo), [SelfLift research](https://arxiv.org/abs/2609.02036), [comfy-kitchen](https://github.com/Comfy-Org/comfy-kitchen). Their licenses/model terms apply. This is an experimental SelfLift-zero adaptation; no trained SelfLift LoRA or model weights are included.
 
-The optional [H3 latent upscaler weights](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) use Apache-2.0 terms. Its network code is extracted from [LBH-123-AI's implementation](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler) under the included [MIT notice](licenses/h3-latent-upscaler-MIT.txt). The bounded H3 inference helper adapts DiffSynth-Studio's streamed layers and MLP/attention under the included [Apache-2.0 license](licenses/diffsynth-APACHE-2.0.txt).
+The optional [H3 latent upscaler weights](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) use Apache-2.0 terms. Its network code is extracted from [LBH-123-AI's implementation](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler) under the included [MIT notice](licenses/h3-latent-upscaler-MIT.txt). The bounded inference helper and chunked decoder adapt DiffSynth-Studio's streamed layers, MLP/attention and H3 VAE under the included [Apache-2.0 license](licenses/diffsynth-APACHE-2.0.txt).
