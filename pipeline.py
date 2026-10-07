@@ -95,9 +95,11 @@ def load_pipeline(settings: RenderSettings, timings=None):
             with timings.measure("unit:" + type(unit).__name__):
                 return original_runner(unit, *args, **kwargs)
         pipe.unit_runner = unit_runner
-    attach_selflift(pipe, height=recipe["target_height"], width=recipe["target_width"],
-                    transition_step=recipe["transition_step"], rho=0.4,
-                    seed=9174, vae_tile_size=256, upscaler=settings.upscaler)
+    pipe.selflift_diagnostics = {"mode": "disabled"}
+    if settings.mode == "selflift":
+        attach_selflift(pipe, height=recipe["target_height"], width=recipe["target_width"],
+                        transition_step=recipe["transition_step"], rho=0.4,
+                        seed=9174, vae_tile_size=256, upscaler=settings.upscaler)
     return pipe, metadata
 
 
