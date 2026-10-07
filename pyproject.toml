@@ -17,6 +17,7 @@ dependencies = [
   "soundfile",
   "av",
   "librosa",
+  "einops==0.8.2",
 ]
 
 [tool.uv.sources]

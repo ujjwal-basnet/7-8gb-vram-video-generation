@@ -11,10 +11,12 @@ def main():
     parser.add_argument("--frames", type=int, default=124)
     parser.add_argument("--seed", type=int, default=9175)
     parser.add_argument("--steps", type=int, choices=[4, 8], default=4)
+    parser.add_argument("--upscaler", choices=["interpolate", "learned3d"], default="interpolate")
     args = parser.parse_args()
     from pipeline import render
     print(render(args.prompt_file.read_text().strip(), args.output,
-                 RenderSettings(frames=args.frames, seed=args.seed, steps=args.steps)), flush=True)
+                 RenderSettings(frames=args.frames, seed=args.seed, steps=args.steps,
+                                upscaler=args.upscaler)), flush=True)
 
 
 if __name__ == "__main__":

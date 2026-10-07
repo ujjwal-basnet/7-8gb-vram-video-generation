@@ -8,3 +8,6 @@ output/
 .env
 render.log
 memory-observation.json
+analize/
+research/
+findings/

@@ -11,6 +11,7 @@ class RenderSettings(BaseModel):
     frames: int = Field(default=124, ge=22, le=124)
     seed: int = Field(default=9175, ge=0)
     steps: Literal[4, 8] = 4
+    upscaler: Literal["interpolate", "learned3d"] = "interpolate"
 
     @property
     def recipe(self):

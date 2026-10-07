@@ -46,8 +46,8 @@ def pixel_anchor(pipe, clean, height, width, tile_size=256):
 
 
 def attach_selflift(pipe, height=384, width=640, transition_step=2, rho=0.4, seed=9174,
-                    vae_tile_size=256):
-    """Install a single-use lift before step 2, keeping the audio trajectory.
+                    vae_tile_size=256, upscaler="interpolate"):
+    """Install a single-use lift before transition_step, keeping the audio trajectory.
 
     Supports the unconditioned text-to-video experiment with CFG=1 only.
     H3's backend prediction is -velocity and scheduler sigma is timestep/1000.
@@ -76,8 +76,13 @@ def attach_selflift(pipe, height=384, width=640, transition_step=2, rho=0.4, see
             clean = state["latents"].float() - state["sigma"] * state["prediction"].float()
             if not torch.isfinite(clean).all():
                 raise ValueError("Denoiser clean estimate is non-finite before SelfLift")
+            if upscaler == "learned3d":
+                from latent_upscaler import learned_lift
+                pipe.load_models_to_device([])
+                direct = learned_lift(clean, height, width)
+            else:
+                direct = F.interpolate(clean, size=(clean.shape[2], height//16, width//16), mode="nearest")
             anchor = pixel_anchor(pipe, clean, height, width, tile_size=vae_tile_size)
-            direct = F.interpolate(clean, size=(clean.shape[2], height//16, width//16), mode="nearest")
             if direct.shape != anchor.shape:
                 raise ValueError(f"Paired lift shapes differ: {direct.shape} vs {anchor.shape}")
             corrected = artifact_correct(direct, anchor, rho=rho)

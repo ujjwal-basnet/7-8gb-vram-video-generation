@@ -21,11 +21,20 @@ uv run python monitor_run.py --steps 8 --frames 39 --output output/scene-8step.m
 
 Four-step is the measured default. Eight-step switches to high resolution after six steps. Both start at 512×320 and finish at 640×384, 24 fps with audio. SelfLift refines at the higher resolution during denoising; it does not guarantee identity, anatomy or motion accuracy. Try 39 frames first; 124 frames gives about five seconds. Edit the prompt or pass `--prompt-file path.txt`.
 
+## Optional learned H3 upscaler
+
+```bash
+uv run python latent_upscaler.py
+uv run python monitor_run.py --steps 8 --frames 39 --upscaler learned3d --output output/learned-8step.mp4
+```
+
+This adds the released 3D Conv v1 model (~659 MiB download) to the SelfLift transition, replacing the direct interpolated lift. H3 is unloaded while the upscaler runs; the paired VAE anchor and remaining diffusion steps are retained. The output stays 640×384. This experimental option is not the tutorial's Ultimate Upscale face-fix pipeline; its full H3 quality, timing and under-8-GB peak remain unverified. The measured default is `--upscaler interpolate`.
+
 ## Notebook
 
 [View the input/output notebook](notebooks/video_generation.ipynb) · [Open in Google Colab](https://colab.research.google.com/github/ujjwal-basnet/7-8gb-vram-video-generation/blob/main/notebooks/video_generation.ipynb)
 
-The notebook shows an editable dog-walking prompt, four/eight-step settings, model download, generation and a video player. It also displays the preserved reference GIFs. Select a GPU runtime on Colab; for local Jupyter, set `PROJECT` to your cloned repository directory.
+The notebook shows an editable dog-walking prompt, four/eight-step settings, optional learned upscaling, model download, generation and a video player. It also displays the preserved reference GIFs. Select a GPU runtime on Colab; for local Jupyter, set `PROJECT` to your cloned repository directory.
 
 Each run generates one clip. A continuous 15-second dog video under 8 GB has not been verified. The existing 15-second GIF is a historical reference sample, not a new dog result.
 
@@ -42,3 +51,5 @@ Short scene:
 ![Three-scene generated film](samples/storm-guardian.gif)
 
 Upstream models and code: [MiniMax H3](https://huggingface.co/MiniMaxAI/MiniMax-H3), [hybrid checkpoint](https://huggingface.co/smhfacct/Minimax-H3-fl2va-ref2va-hybrid-models), [DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio), [NF4 components](https://huggingface.co/DiffSynth-Studio/MiniMax-H3-NF4), [LightX2V Turbo](https://huggingface.co/lightx2v/Minimax-h3-Turbo), [SelfLift research](https://arxiv.org/abs/2609.02036), [comfy-kitchen](https://github.com/Comfy-Org/comfy-kitchen). Their licenses/model terms apply. This is an experimental SelfLift-zero adaptation; no trained SelfLift LoRA or model weights are included.
+
+The optional [H3 latent upscaler weights](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) use Apache-2.0 terms. Its network code is extracted from [LBH-123-AI's implementation](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler) under the included [MIT notice](licenses/h3-latent-upscaler-MIT.txt).

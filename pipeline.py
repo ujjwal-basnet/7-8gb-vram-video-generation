@@ -33,6 +33,11 @@ def load_pipeline(settings: RenderSettings, timings=None):
     if receipt.get("status") != "verified" or receipt.get("sha256") != SHA256:
         raise ValueError("Run download_models.py to verify the hybrid checkpoint")
     recipe = settings.recipe
+    if settings.upscaler == "learned3d":
+        from latent_upscaler import PATH as upscaler_path, verify_checkpoint
+        if not upscaler_path.is_file():
+            raise FileNotFoundError("Download first: uv run python latent_upscaler.py")
+        verify_checkpoint(upscaler_path)
     configure_memory(settings)
     enable_memory_efficient_attention()
     offload = dict(offload_dtype="disk", offload_device="disk",
@@ -92,7 +97,7 @@ def load_pipeline(settings: RenderSettings, timings=None):
         pipe.unit_runner = unit_runner
     attach_selflift(pipe, height=recipe["target_height"], width=recipe["target_width"],
                     transition_step=recipe["transition_step"], rho=0.4,
-                    seed=9174, vae_tile_size=256)
+                    seed=9174, vae_tile_size=256, upscaler=settings.upscaler)
     return pipe, metadata
 
 
@@ -115,6 +120,11 @@ def render(prompt: str, output: Path, settings: RenderSettings | None = None):
                   recipe=recipe, effective_allocator_cap_gib=effective_cap,
                   git_commit=os.environ.get("H3_GIT_COMMIT", "unknown"),
                   width=recipe["target_width"], height=recipe["target_height"])
+    if settings.upscaler == "learned3d":
+        from latent_upscaler import REPO, REVISION, FILENAME, SHA256
+        report["upscaler_model"] = dict(repo=REPO, revision=REVISION,
+                                       filename=FILENAME, sha256=SHA256,
+                                       computation_dtype="float32")
     receipt = output.with_suffix(".json")
     receipt.write_text(json.dumps(report, indent=2))
     try:
