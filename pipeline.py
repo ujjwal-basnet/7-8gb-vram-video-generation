@@ -27,6 +27,7 @@ def load_pipeline(settings: RenderSettings, timings=None):
     from hybrid_checkpoint import PATH, SHA256
     from hybrid_lora import HybridTurboLoader, turbo_metadata
     from safe_attention import enable_memory_efficient_attention
+    from bounded_rows import enable_bounded_rows
     from selflift import attach_selflift
 
     receipt = json.loads((ROOT / "hybrid-download.json").read_text())
@@ -40,6 +41,7 @@ def load_pipeline(settings: RenderSettings, timings=None):
         verify_checkpoint(upscaler_path)
     configure_memory(settings)
     enable_memory_efficient_attention()
+    enable_bounded_rows()
     offload = dict(offload_dtype="disk", offload_device="disk",
                    onload_dtype="disk", onload_device="disk",
                    preparing_dtype="disk", preparing_device="disk",
